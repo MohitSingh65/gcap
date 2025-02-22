@@ -3,6 +3,7 @@ package sniffer
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/pcap"
@@ -10,9 +11,13 @@ import (
 
 // Start capturing the packets
 func StartSniffing() {
-	handle, err := pcap.OpenLive("wlan0", 1600, true, pcap.BlockForever)
+	device := "wlan0"
+	snapshotlen := int32(65535)
+	promiscuous := false
+	timeout := time.Second * 30
+	handle, err := pcap.OpenLive(device, snapshotlen, promiscuous, timeout)
 	if err != nil {
-		log.Fatal("Error opening device:", err)
+		log.Fatalf("Error opening device %s: %v", device, err)
 	}
 	defer handle.Close()
 
