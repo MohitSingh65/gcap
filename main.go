@@ -2,18 +2,18 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"net-sniffer/server"
 	"net-sniffer/sniffer"
-	"net/http"
 )
 
 func main() {
 	fmt.Println("Starting network packet analyzer...")
 
+	// Start websocket server in a separate Goroutine
+	go server.StartWebSocketServer()
+
 	// start packet capturing
 	go sniffer.StartSniffing()
 
-	port := "8080"
-	fmt.Println("Server running on port", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	select {}
 }

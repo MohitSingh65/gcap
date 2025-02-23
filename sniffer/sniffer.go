@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/pcap"
+	"net-sniffer/server"
 )
 
 // Start capturing the packets
@@ -25,6 +26,8 @@ func StartSniffing() {
 
 	// Read packets in loop
 	for packet := range packetSource.Packets() {
-		fmt.Println("Captured packet:", packet)
+		packetData := fmt.Sprintf("Captured packet: %v", packet)
+		fmt.Println(packetData)
+		server.BroadcastMessage(packetData) // Send to websocket client
 	}
 }

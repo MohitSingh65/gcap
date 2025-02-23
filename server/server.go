@@ -2,11 +2,11 @@ package server
 
 import (
 	"fmt"
-	"github.com/gorilla/websocket"
 	"log"
-	"net-sniffer/sniffer"
 	"net/http"
 	"sync"
+
+	"github.com/gorilla/websocket"
 )
 
 var upgrader = websocket.Upgrader{
@@ -15,21 +15,54 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-type PacketData struct {
-	Timestamp string `json:"timestamp"`
-	SrcMAC    string `json:"src_mac"`
-	DstMAC    string `json:"dst_mac"`
-	SrcIP     string `json:"src_ip"`
-	DstIP     string `json:"dst_ip"`
-	SrcPort   uint16 `json:"src_port"`
-	DstPort   uint16 `json:"dst_port"`
-	Payload   string `json:"payload"`
+var (
+	clients   = make(map[*websocket.Conn]bool) // Connected clients
+	broadcast = make(chan string)              // Channel for broadcasting packets
+	mutex     = sync.Mutex{}
+)
+
+func HandleConnections(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println("Websocket upgrade error:", err)
+		return
+	}
+	defer conn.Close()
+
+	// Register new client
+	mutex.Lock()
+	clients[conn] = true
+	mutex.Unlock()
+
+	fmt.Println("New websocket client connected!")
+
+	for {
+		_, _, err := conn.ReadMessage()
+		if err != nil {
+			mutex.Lock()
+			delete(clients, conn)
+			mutex.Unlock()
+			break
+		}
+	}
 }
 
-func main() {
-	http.HandleFunc("/start", startCaptureHandler)
-	http.HandleFunc("/stop", stopCaptureHandler)
-	http.HandleFunc("/ws", wsHandler)
+func BroadcastMessage(message string) {
+	mutex.Lock()
+	defer mutex.Unlock()
 
-	log.Println("Starting ")
+	for client := range clients {
+		err := client.WriteMessage(websocket.TextMessage, []byte(message))
+		if err != nil {
+			log.Println("Websocket send error:", err)
+			client.Close()
+			delete(clients, client)
+		}
+	}
+}
+
+func StartWebSocketServer() {
+	http.HandleFunc("/ws", HandleConnections)
+	fmt.Println("Websocket server started at ws://localhost:8080/ws")
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
