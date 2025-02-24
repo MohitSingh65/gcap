@@ -15,7 +15,7 @@ func StartSniffing() {
 	device := "wlan0"
 	snapshotlen := int32(65535)
 	promiscuous := false
-	timeout := time.Second * 30
+	timeout := time.Millisecond * 100
 	handle, err := pcap.OpenLive(device, snapshotlen, promiscuous, timeout)
 	if err != nil {
 		log.Fatalf("Error opening device %s: %v", device, err)
